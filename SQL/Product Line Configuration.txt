@@ -1,0 +1,96 @@
+-- DWS sql 
+-- ******************************************************************** --
+-- author: hw_wangzirui
+-- 主题域：光伏销售
+-- 功能：产线能力配置表
+-- 入参: 无
+-- 出参: 无
+-- 异常处理: 回滚
+-- 调度周期：日
+-- 目标表：***
+-- 来源表：***
+-- 更新方式：每日刷新数据
+-- create time: 2022/09/07 16:55:24 GMT+08:00
+-- ******************************************************************** --
+TRUNCATE TABLE T0;
+
+
+-- SELECT * FROM T0;
+-- SELECT * FROM T0;
+-- CREATE TABLE T0
+-- (
+-- PRODUCT_LINE VARCHAR(64),
+-- HEARTH_SIZE NUMERIC,
+-- ORGANIZATION_ID NUMERIC,
+-- THICKNESS_CODE NUMERIC,
+-- THICKNESS_CODE_1_6 NUMERIC,
+-- THICKNESS_CODE_2_0 NUMERIC,
+-- THICKNESS_CODE_2_8 NUMERIC,
+-- THICKNESS_CODE_3_2 NUMERIC,
+-- SECOND_COATING_FLAG NUMERIC,
+-- SILK_SCREEN_FLAG NUMERIC,
+-- MAX_SIZE_SILK_SCREEN_LENGTH NUMERIC,
+-- MAX_SIZE_SILK_SCREEN_WIDTH NUMERIC,
+-- MAX_SIZE_LENGTH NUMERIC,
+-- MAX_SIZE_WIDTH NUMERIC,
+-- MAX_CAPACITY_TEMPERED NUMERIC,
+-- TEMPERED_WORKSHOP VARCHAR(64),
+-- DWS_CREATE_DATE TIMESTAMP WITHOUT TIME ZONE DEFAULT '2022-09-07 16:47:18',
+-- DWS_UPDATE_DATE TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP
+-- );
+
+INSERT INTO T0
+(
+product_line,
+hearth_size,
+organization_id,
+thickness_code,
+thickness_code_1_6,
+thickness_code_2_0,
+thickness_code_2_8,
+thickness_code_3_2,
+second_coating_flag,
+silk_screen_flag,
+max_size_silk_screen_length,
+max_size_silk_screen_width,
+max_size_length,
+max_size_width,
+max_capacity_tempered,
+tempered_workshop
+)
+SELECT DISTINCT PPL.PRODUCT_LINE
+     , PPL.HEARTH_SIZE
+     , PPL.ORGANIZATION_ID
+     , PCL.THICKNESS_CODE
+     , CASE WHEN PPL.THICKNESS_CODES LIKE '%1.6%' THEN 1 ELSE 0 END THICKNESS_CODE_1_6 -- 如果厚度能力中包含"1.6" ，则可以生产1.6厚度
+     , CASE WHEN PPL.THICKNESS_CODES LIKE '%2.0%' THEN 1 ELSE 0 END THICKNESS_CODE_2_0 -- 如果厚度能力中包含"2.0" ，则可以生产2.0厚度
+     , CASE WHEN PPL.THICKNESS_CODES LIKE '%2.8%' THEN 1 ELSE 0 END THICKNESS_CODE_2_8 -- 如果厚度能力中包含"2.0" ，则可以生产2.0厚度
+     , CASE WHEN PPL.THICKNESS_CODES LIKE '%3.2%' THEN 1 ELSE 0 END THICKNESS_CODE_3_2 -- 如果厚度能力中包含"3.2" ，则可以生产3.2厚度
+     , PPL.SECOND_COATING_FLAG
+     , PPL.SILK_SCREEN_FLAG
+     , PPL.MAX_SIZE_SILK_SCREEN_LENGTH
+     , PPL.MAX_SIZE_SILK_SCREEN_WIDTH
+     , PPL.MAX_SIZE_LENGTH
+     , PPL.MAX_SIZE_WIDTH
+     , PCL.MAX_CAPACITY MAX_CAPACITY_TEMPERED
+     , PPL.PRODUCT_LINE_DESC
+  FROM T1 PPL -- 产线能力配置表
+  JOIN (SELECT * FROM T2 WHERE IS_DELETED = 0) PCL -- 产线厚度最大产能配置表
+    ON PPL.PRODUCT_LINE = PCL.TEMPERED_LINE
+ WHERE PPL.IS_DELETED = 0
+   AND PRODUCT_LINE_DESC LIKE '%钢化%'; -- 只筛选出钢化产线
+
+update T2
+set max_size_width='1297',
+max_size_silk_screen_width='1297',
+min_size_width='1297',
+min_size_silk_screen_width='1297'
+where product_line IN ('W51','W54','W55','W58');
+
+
+update T2
+set max_size_width='1128',
+max_size_silk_screen_width='1128',
+min_size_width='1128',
+min_size_silk_screen_width='1128'
+where product_line IN ('W52','W53','W56','W57');

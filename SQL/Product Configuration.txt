@@ -1,0 +1,54 @@
+-- DWS sql 
+-- ******************************************************************** --
+-- author: hw_wangzirui
+-- 主题域：光伏销售
+-- 功能：产线状态表
+-- 入参: 无
+-- 出参: 无
+-- 异常处理: 回滚
+-- 调度周期：日
+-- 目标表：***
+-- 来源表：***
+-- 更新方式：每日刷新数据
+-- create time: 2022/09/07 16:55:24 GMT+08:00
+-- ******************************************************************** --
+TRUNCATE TABLE T0;
+
+-- SELECT * FROM T1;
+-- SELECT * FROM T2
+-- UPDATE T2 SET PRODUCT_STATUS = 0 WHERE PRODUCT_LINE = 'W7'
+-- CREATE TABLE T0
+-- (
+-- PRODUCT_LINE VARCHAR(64),
+-- STATUS_DATE TIMESTAMP WITHOUT TIME ZONE,
+-- PRODUCT_STATUS NUMERIC,
+-- DWS_CREATE_DATE TIMESTAMP WITHOUT TIME ZONE DEFAULT '2022-09-07 16:47:18',
+-- DWS_UPDATE_DATE TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP
+-- );
+
+
+INSERT INTO T0
+-- 为产线增加行数标识
+WITH NEWEST_PL_STATUS AS(
+SELECT PRODUCT_LINE_ID
+     , STATUS_DATE
+     , PRODUCT_STATUS
+     , ROW_NUMBER() OVER(PARTITION BY PRODUCT_LINE_ID ORDER BY STATUS_DATE DESC) ROW_NUMBER_STATUS -- 行数标识，通过最后更新日期
+  FROM T1 -- 产线状态表
+ WHERE IS_DELETED = 0
+)
+
+
+SELECT PPL.PRODUCT_LINE
+     , PLS.STATUS_DATE
+     , COALESCE(PLS.PRODUCT_STATUS, 0) PRODUCT_STATUS
+  FROM 
+    (
+    SELECT * 
+      FROM T2 -- 产线能力表
+     WHERE IS_DELETED = 0
+       AND PRODUCT_LINE_DESC LIKE '%钢化%' -- 只筛选出钢化产线
+    ) PPL
+  LEFT JOIN NEWEST_PL_STATUS PLS
+    ON PPL.ID = PLS.PRODUCT_LINE_ID
+   AND PLS.ROW_NUMBER_STATUS = 1;
